@@ -1,0 +1,12 @@
+version: '3.8'  # Указывается версия Docker Compose
+
+services:
+  prize-notifier:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/doctors-appointment-notifier
+    ports:
+      - "2444:2444"
+    restart: unless-stopped
