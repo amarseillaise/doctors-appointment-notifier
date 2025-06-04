@@ -107,7 +107,7 @@ class DoctorAppointmentBotService:
 
     def _run_thread_polling(self, bot: TeleBot):
         timeout = int(os.getenv('POLLING_TIMEOUT_MINUTES'))
-        job = schedule.every(timeout).seconds.do(self._check_slots_available, bot=bot)
+        job = schedule.every(timeout).minutes.do(self._check_slots_available, bot=bot)
         while self._has_subscribers():
             self.polling_site_enabled = True
             schedule.run_pending()
@@ -150,10 +150,11 @@ class DoctorAppointmentBotService:
 
     @staticmethod
     def _get_all_slots_formated(slot_days: list[SlotModel]) -> str:
-        msg = 'Для записи доступны следующие даты:\n\n'
-        msg += '\n'.join(f"{slot.date}" for slot in slot_days)
-        msg = msg or 'ОКАК. А записи то совсем нет('
-
+        if slot_days:
+            msg = 'Для записи доступны следующие даты:\n\n'
+            msg += '\n'.join(f"{slot.date}" for slot in slot_days)
+        else:
+            msg = 'ОКАК. А записи то совсем нет('
         return msg
 
     @staticmethod

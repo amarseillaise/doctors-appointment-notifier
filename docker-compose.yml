@@ -1,7 +1,7 @@
 version: '3.8'  # Указывается версия Docker Compose
 
 services:
-  prize-notifier:
+  doctors-appointment-notifier:
     build:
       context: .
       dockerfile: Dockerfile
