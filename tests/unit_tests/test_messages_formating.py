@@ -20,9 +20,10 @@ class TestIsMessageFormattingCorrectly(unittest.TestCase):
 
         fmt_string = method(slots)
         expected_string = (
-            "15.04.2025 - 09:00\n15.04.2025 - 11:00\n15.04.2025 - 15:00\n\n"
-            "18.04.2025 - 09:00\n18.04.2025 - 11:00\n18.04.2025 - 15:00\n\n"
-            "21.05.2025 - 09:00\n21.05.2025 - 11:00\n21.05.2025 - 15:00"
+            "Для записи доступны следующие даты:\n\n"
+            "15.04.2025\n"
+            "18.04.2025\n"
+            "21.05.2025"
         )
         self.assertEqual(expected_string, fmt_string)
 

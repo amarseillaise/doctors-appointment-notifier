@@ -29,7 +29,7 @@ class DoctorAppointmentBotService:
             types.BotCommand('subscribe', description='Подписаться на освободившиеся слоты'),
             types.BotCommand('unsubscribe', description='Отписаться от освободившихся слотов'),
             types.BotCommand('list_slots', description='Список всех временных слотов'),
-            types.BotCommand('try_set_day_delta', description='Задать максимальную дельту в днях для отслеживания слотов'),
+            types.BotCommand('set_new_day_delta_handler', description='Задать максимальную дельту в днях для отслеживания слотов'),
         ]
         bot.set_my_commands(commands)
 
@@ -46,7 +46,11 @@ class DoctorAppointmentBotService:
         if self.check_start_site_polling():
             self.start_polling(bot)
 
-    def try_set_day_delta(self, bot: TeleBot, chat_message: types.Message):
+    def set_new_day_delta_handler(self, bot: TeleBot, chat_message: types.Message):
+        bot.send_message(chat_message.chat.id, 'Введи значение')
+        bot.register_next_step_handler(chat_message, self.try_set_day_delta, bot=bot)
+
+    def try_set_day_delta(self, chat_message: types.Message, bot: TeleBot):
         new_delta = self._verify_day_delta_value(chat_message.text)
         if new_delta > 0:
             self.current_max_day_delta = new_delta
@@ -59,7 +63,7 @@ class DoctorAppointmentBotService:
     def _verify_day_delta_value(self, value: str):
         try:
             verified_delta = int(value)
-        except TypeError:
+        except ValueError:
             verified_delta = -1
         return verified_delta
 
@@ -74,8 +78,14 @@ class DoctorAppointmentBotService:
 
     def send_list_slots(self, bot: TeleBot, chat_message: types.Message):
         slots = self.http_service.get_slot_list()
-        message = self._get_all_slots_formated(slots)
-        bot.send_message(chat_message.chat.id, message)
+        message = ''
+        if message:
+            bot.send_message(chat_message.chat.id, message)
+        else:
+            photo = open('static/okak.jpg', 'rb')
+            caption = 'А свободных мест то и нет'
+            bot.send_photo(chat_message.chat.id, photo, caption)
+            photo.close()
 
     def check_start_site_polling(self) -> bool:
         return self._has_subscribers() and not self.polling_site_enabled
@@ -150,11 +160,10 @@ class DoctorAppointmentBotService:
 
     @staticmethod
     def _get_all_slots_formated(slot_days: list[SlotModel]) -> str:
+        msg = ''
         if slot_days:
             msg = 'Для записи доступны следующие даты:\n\n'
             msg += '\n'.join(f"{slot.date}" for slot in slot_days)
-        else:
-            msg = 'ОКАК. А записи то совсем нет('
         return msg
 
     @staticmethod

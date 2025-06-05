@@ -30,9 +30,9 @@ def unsubscribe(message):
 def list_slots(message):
     bot_service.send_list_slots(bot, message)
 
-@bot.message_handler(commands=['try_set_day_delta'])
-def try_set_day_delta(message):
-    bot_service.try_set_day_delta(bot, message)
+@bot.message_handler(commands=['set_new_day_delta_handler'])
+def set_new_day_delta_handler(message):
+    bot_service.set_new_day_delta_handler(bot, message)
 
 def main():
     bot_service.init_commands(bot)
