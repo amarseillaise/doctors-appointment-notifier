@@ -78,7 +78,7 @@ class DoctorAppointmentBotService:
 
     def send_list_slots(self, bot: TeleBot, chat_message: types.Message):
         slots = self.http_service.get_slot_list()
-        message = ''
+        message = self._get_all_slots_formated(slots)
         if message:
             bot.send_message(chat_message.chat.id, message)
         else:
