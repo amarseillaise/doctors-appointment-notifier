@@ -3,20 +3,21 @@ import json
 from dataclasses import dataclass
 from logging import log
 
-from app.models import SlotModel, SlotDetailsModel
+from app.models import SlotModel, SlotDetailsModel, DoctorToSlotMapModel
+from utils import DataPacker
 
 class DoctorsAppointmentHttpService:
 
     def __init__(self):
         self._url = self.Url()
 
-    def get_slot_list(self) -> list[SlotModel]:
+    def get_slot_list(self) -> list[DoctorToSlotMapModel]:
         http_method = 'slots/'
         response = self._get(http_method)
         if not response:
             return []
-        return [SlotModel(date=slot['date'], details=[SlotDetailsModel(**ds) for ds in slot['details']])
-                for slot in json.loads(response.content)]
+        data = json.loads(response.content)
+        return [DoctorToSlotMapModel(**item) for item in data]
 
     def _get(self, method_uri) -> requests.Response | None:
         url = f'{self._url.get_url()}/{method_uri}'

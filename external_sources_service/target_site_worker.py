@@ -4,16 +4,17 @@ from dataclasses import dataclass
 from functools import wraps
 from typing import Callable
 
-from app import models
+from app.models import DoctorInfoModel, AuthResponseModel
+
 from fake_useragent import UserAgent
 
 class RequestWorker:
 
-    def __init__(self, username: str, password: str, doctors_code:str):
+    def __init__(self, username: str, password: str, doctor_infos: list[dict]):
         self.session = requests.Session()
         self.username = username
         self.password = password
-        self.doctors_code = doctors_code
+        self.doctor_infos = [DoctorInfoModel(**info) for info in doctor_infos]
         self.token = None
         self.url = RequestWorker.Url()
         self._init_headers()
@@ -24,7 +25,7 @@ class RequestWorker:
         def wrapper(self, *args, **kwargs):
             http_method = 'timetable-doctors'
             url = self._build_url(self.url.get_url(), http_method)
-            body = json.dumps({'code': self.doctors_code})
+            body = json.dumps({'code': '0'})
             http_response = self.session.post(url, data=body, allow_redirects=False)
             if http_response.status_code in (302, 401):
                 self.authenticate()
@@ -38,21 +39,22 @@ class RequestWorker:
         url = self._build_url(self.url.get_url(), http_method)
         http_response = self.session.post(url=url, data=self._get_raw_auth_data())
         if http_response.status_code == 200:
-            response_model = models.AuthResponseModel(**json.loads(http_response.content))
+            response_model = AuthResponseModel(**json.loads(http_response.content))
             if response_model.data:
                 self._set_bearer_token(response_model.data.token)
                 return True
 
     @_auth_if_need
     def get_slots(self) -> dict:
+        slots = {}
         http_method = 'timetable-doctors'
         url = self._build_url(self.url.get_url(), http_method)
-        body = json.dumps({'code': self.doctors_code})
-        http_response = self.session.post(url, data=body)
-        if http_response.status_code == 200:
-            slots = json.loads(http_response.content)
-            return slots
-        return {}
+        for doctor in self.doctor_infos:
+            body = json.dumps({'code': doctor.code})
+            http_response = self.session.post(url, data=body)
+            if http_response.status_code == 200:
+                slots[f'{doctor.code}:{doctor.name}'] = json.loads(http_response.content)
+        return slots
 
 
     def _get_auth_data(self) -> dict[str, str]:

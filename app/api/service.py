@@ -1,15 +1,22 @@
 import os
 
+from utils import DataPacker
 from external_sources_service.target_site_worker import RequestWorker
 from fastapi import HTTPException
-from app.models import SlotModel, SlotDetailsModel
+from app.models import DoctorToSlotMapModel
 
 
 def _get_target_site_worker() -> RequestWorker:
     username = os.getenv('USERNAME')
     passwd = os.getenv('PASSWORD')
-    doctors_code = os.getenv('DOCTORS_CODE')
-    return RequestWorker(username, passwd, doctors_code)
+    doctor_infos = _parse_doctors_code(os.getenv('DOCTORS_INFO'))
+    return RequestWorker(username, passwd, doctor_infos)
+
+def _parse_doctors_code(codes: str) -> list[dict]:
+    parsed_string = codes.split(';')
+    result = [dict(code=infos.split(':')[0], name=infos.split(':')[1])
+              for infos in parsed_string]
+    return result
 
 
 def _authenticate(target_site_worker: RequestWorker) -> None:
@@ -17,7 +24,9 @@ def _authenticate(target_site_worker: RequestWorker) -> None:
         raise HTTPException(401)
 
 
-def get_slots() -> list[SlotModel]:
+def get_slots() -> list[DoctorToSlotMapModel]:
     site_worker = _get_target_site_worker()
-    return [SlotModel(date=day, details=[SlotDetailsModel(**d) for d in ds])
-            for day, ds in site_worker.get_slots().items()]
+    raw_slots = site_worker.get_slots()
+    data_packer = DataPacker()
+    formated_slots = data_packer.get_packed_slots(raw_slots)
+    return formated_slots

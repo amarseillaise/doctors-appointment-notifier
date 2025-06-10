@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI, status
 
 from app.api import service
-from app.models import SlotModel
+from app.models import DoctorToSlotMapModel
 
 server = ...
 app = FastAPI()
@@ -22,8 +22,8 @@ def run_uvicorn():
 
 @app.get("/api/slots/",
          response_description='Returns a list of doctors slots',
-         response_model=list[SlotModel],
+         response_model=list[DoctorToSlotMapModel],
          status_code=status.HTTP_200_OK)
-def get_slots() -> list[SlotModel]:
+def get_slots():
     slots = service.get_slots()
     return slots

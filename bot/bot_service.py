@@ -1,3 +1,4 @@
+import sys
 import schedule
 import time
 import json
@@ -10,9 +11,10 @@ from threading import Thread
 from telebot import TeleBot, types, apihelper
 
 from bot.http_service import DoctorsAppointmentHttpService
-from app.models import SlotModel
+from app.models import DoctorToSlotMapModel
 
 current_thread = ...
+
 
 class DoctorAppointmentBotService:
 
@@ -92,12 +94,22 @@ class DoctorAppointmentBotService:
 
     def _check_slots_available(self, bot: TeleBot):
         available_slots = self.http_service.get_slot_list()
-        nearest_day = available_slots[0] if available_slots else None
-        self.logger.info(nearest_day)
-        logging.info(nearest_day)
-        if available_slots and nearest_day and self._is_delta_ok(nearest_day.date):
-            message = self._get_available_slots_formated(nearest_day)
+        nearest_doctor = self._get_nearest_doctor(available_slots)
+        self.logger.info(nearest_doctor)
+        if nearest_doctor:
+            message = self._get_available_slots_formated(nearest_doctor)
             self._send_message_to_subscribers(message, bot)
+
+    def _get_nearest_doctor(self, available_slots) -> DoctorToSlotMapModel | None:
+        nearest_delta = sys.maxsize
+        nearest_doctor = None
+        for doctor in available_slots:
+            date = doctor.slots[0].date
+            delta = self._compute_delta(date)
+            if self._is_delta_ok(date) and delta < nearest_delta:
+                nearest_delta = delta
+                nearest_doctor = doctor
+        return nearest_doctor
 
     def _is_delta_ok(self, target_day: str) -> bool:
         delta = self._compute_delta(target_day)
@@ -108,7 +120,6 @@ class DoctorAppointmentBotService:
         nearest_date_lst.reverse()
         nearest_date = datetime(*nearest_date_lst)
         return (nearest_date - datetime.now()).days
-
 
     def start_polling(self, bot: TeleBot):
         global current_thread
@@ -159,17 +170,21 @@ class DoctorAppointmentBotService:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     @staticmethod
-    def _get_all_slots_formated(slot_days: list[SlotModel]) -> str:
+    def _get_all_slots_formated(slots: list[DoctorToSlotMapModel]) -> str:
         msg = ''
-        if slot_days:
-            msg = 'Для записи доступны следующие даты:\n\n'
-            msg += '\n'.join(f"{slot.date}" for slot in slot_days)
+        if slots:
+            msg = 'Для записи доступны следующие докторы и даты даты:\n'
+            for slot in slots:
+                msg += f'\n{slot.doctor.name}:\n'
+                for day in slot.slots:
+                    msg += f'{day.date}\n'
         return msg
 
     @staticmethod
-    def _get_available_slots_formated(nearest_day: SlotModel) -> str:
-        text = 'Срочно! Срочно! Срочно! Доступна запись на:'
-        day = nearest_day.date
-        _time = nearest_day.details[0].b_dt
+    def _get_available_slots_formated(nearest_day: DoctorToSlotMapModel) -> str:
+        text = 'Срочно! Срочно! Срочно! Доступна запись:'
+        doctors_name = nearest_day.doctor.name
+        day = nearest_day.slots[0].date
+        _time = nearest_day.slots[0].details[0].b_dt
 
-        return f'{text}\n\n{day} - {_time}'
+        return f'{text}\n\n{doctors_name}:\n{day} - {_time}'
